@@ -21,6 +21,12 @@ struct fbdevgl_context {
 
 	/* The rect damaged by the last *render pass* (yes, it feels wrong writing that.. */
 	unsigned short damage_rect[2][2];
+
+	/* private, don't touch! */
+	void (*set_pixel)(struct fbdevgl_context *fbglcntx,
+			  unsigned int x,
+			  unsigned int y,
+			  unsigned short value);
 };
 
 #define _fbdgl_scale() (fbglcntx->scale)
@@ -111,7 +117,7 @@ static inline void fbdevgl_reset_damage_rect(struct fbdevgl_context *fbglcntx)
 
 static inline void fbdevgl_clear_damaged_area(struct fbdevgl_context *fbglcntx)
 {
-        /* Work out where we need to clear the framebuffer and do it */
+	/* Work out where we need to clear the framebuffer and do it */
 	off_t damaged_line_start, damaged_line_end;
 	size_t damage_sz;
 	damaged_line_start = start_of_line(fbglcntx, _fbdgl_damagerect()[1][0]);
@@ -127,6 +133,42 @@ static inline void fbdevgl_clear_damaged_area(struct fbdevgl_context *fbglcntx)
 #endif
 
 	memset(fbglcntx->fb + damaged_line_start, 0, damaged_line_end);
+}
+
+static inline uint8_t *_fbdevgl_calculate_pixel_addr(struct fbdevgl_context *fbglcntx,
+						     unsigned int x,
+						     unsigned int y)
+{
+	unsigned int line = start_of_line(fbglcntx, y);
+	unsigned int byteinline = byte_in_line(fbglcntx, x);
+	unsigned int fboff = line + byteinline;
+	uint8_t *fbaddr = (uint8_t *)(fbglcntx->fb + fboff);
+
+	return fbaddr;
+}
+
+static inline void _fbdevgl_set_pixel_2(struct fbdevgl_context *fbglcntx,
+			      unsigned int x,
+			      unsigned int y,
+			      unsigned short value)
+{
+	unsigned int patternidx = value % ARRAY_SIZE(twobitpatterns);
+	uint8_t mask = twobits_in_byte(x);
+	const uint8_t *pattern = twobitpatterns[patternidx];
+	uint8_t *fbaddr = _fbdevgl_calculate_pixel_addr(fbglcntx, x, y);
+	uint8_t *nextline = fbaddr + _fbdgl_stride();
+
+	*fbaddr = (*fbaddr & ~mask) | (pattern[0] & mask);
+	*nextline = (*nextline & ~mask) | (pattern[1] & mask);
+}
+
+static inline void _fbdevgl_set_pixel_1(struct fbdevgl_context *fbglcntx,
+			      unsigned int x,
+			      unsigned int y,
+			      unsigned short value)
+{	uint8_t *fbaddr = _fbdevgl_calculate_pixel_addr(fbglcntx, x, y);
+
+	*fbaddr |= bit_in_byte(x);
 }
 
 static inline int fbdevgl_init(const char *fbdev_path, struct fbdevgl_context *fbglcntx)
@@ -170,6 +212,15 @@ static inline int fbdevgl_init(const char *fbdev_path, struct fbdevgl_context *f
 	fbglcntx->stride = stride;
 
 	fbglcntx->scale = 2;
+	switch(_fbdgl_scale()) {
+	case 2: {
+		fbglcntx->set_pixel = _fbdevgl_set_pixel_2;
+		break;
+	}
+	case 1:
+		fbglcntx->set_pixel = _fbdevgl_set_pixel_1;
+		break;
+	}
 	/* Stash the size of the framebuffer and reset the damage rect */
 	_fbdgl_geometry()[0] = fbglcntx->width / fbglcntx->scale;
 	_fbdgl_geometry()[1] = fbglcntx->height / fbglcntx->scale;
@@ -177,16 +228,10 @@ static inline int fbdevgl_init(const char *fbdev_path, struct fbdevgl_context *f
 	return 0;
 }
 
-static void fbdevgl_set_pixel(struct fbdevgl_context *fbglcntx,
-			      unsigned int x,
-			      unsigned int y,
-			      unsigned short value)
+static inline void _fbdevgl_update_damage_rect(struct fbdevgl_context *fbglcntx,
+					       unsigned int x,
+					       unsigned y)
 {
-	unsigned int line = start_of_line(fbglcntx, y);
-	unsigned int byteinline = byte_in_line(fbglcntx, x);
-	unsigned int fboff = line + byteinline;
-	uint8_t *fbaddr = (uint8_t *)(fbglcntx->fb + fboff);
-
 	/* Slide the damage rect x start out from the right */
 	if (x < _fbdgl_damagerect()[0][0])
 		_fbdgl_damagerect()[0][0] = x;
@@ -202,20 +247,15 @@ static void fbdevgl_set_pixel(struct fbdevgl_context *fbglcntx,
 	/* Slide the damage rect y end out from the top */
 	if (y > _fbdgl_damagerect()[1][1])
 		_fbdgl_damagerect()[1][1] = y;
+}
 
-	switch(_fbdgl_scale()) {
-	case 2: {
-		unsigned int patternidx = value % ARRAY_SIZE(twobitpatterns);
-		uint8_t mask = twobits_in_byte(x);
-		const uint8_t *pattern = twobitpatterns[patternidx];
-		uint8_t *nextline = fbaddr + _fbdgl_stride();
-		*fbaddr = (*fbaddr & ~mask) | (pattern[0] & mask);
-		*nextline = (*nextline & ~mask) | (pattern[1] & mask);
-		break;
-	}
-	case 1:
-		*fbaddr |= bit_in_byte(x);
-		break;
-	}
+static inline void fbdevgl_set_pixel(struct fbdevgl_context *fbglcntx,
+			      unsigned int x,
+			      unsigned int y,
+			      unsigned short value)
+{
+	_fbdevgl_update_damage_rect(fbglcntx, x, y);
+
+	fbglcntx->set_pixel(fbglcntx, x, y, value);
 }
 #endif // _H_FBDEVGL
