@@ -3,6 +3,8 @@
 
 #include <linux/fb.h>
 
+#define FBDEVGL_ARRAY_SIZE(_a) (sizeof(_a) / sizeof(_a[0]))
+
 struct fbdevgl_context {
 	/* Native framebuffer stuff */
 	int fd;
@@ -152,7 +154,7 @@ static inline void _fbdevgl_set_pixel_2(struct fbdevgl_context *fbglcntx,
 			      unsigned int y,
 			      unsigned short value)
 {
-	unsigned int patternidx = value % ARRAY_SIZE(twobitpatterns);
+	unsigned int patternidx = value % FBDEVGL_ARRAY_SIZE(twobitpatterns);
 	uint8_t mask = twobits_in_byte(x);
 	const uint8_t *pattern = twobitpatterns[patternidx];
 	uint8_t *fbaddr = _fbdevgl_calculate_pixel_addr(fbglcntx, x, y);
