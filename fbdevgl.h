@@ -240,9 +240,9 @@ static inline void fbdevgl_setup_centered_window(struct fbdevgl_context *fbglcnt
 	const int x_pad = (fbglcntx->geometry[0] - window_width) / 2;
 	const int y_pad = (fbglcntx->geometry[1] - window_height) / 2;
 
-	fbglcntx->left = y_pad;
+	fbglcntx->left = x_pad;
 	fbglcntx->right = fbglcntx->left + window_width;
-	fbglcntx->top = x_pad;
+	fbglcntx->top = y_pad;
 	fbglcntx->bottom = fbglcntx->top + window_height;
 }
 
