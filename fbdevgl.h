@@ -276,4 +276,15 @@ static inline void fbdevgl_set_pixel(struct fbdevgl_context *fbglcntx,
 
 	fbglcntx->set_pixel(fbglcntx, x, y, value);
 }
+
+static inline void fbdevgl_window_set_pixel(struct fbdevgl_context *fbglcntx,
+			      unsigned int x,
+			      unsigned int y,
+			      unsigned short value)
+{
+	unsigned int effective_x = x + fbglcntx->left;
+	unsigned int effective_y = y + fbglcntx->top;
+
+	fbdevgl_set_pixel(fbglcntx, effective_x, effective_y, value);
+}
 #endif // _H_FBDEVGL
