@@ -294,6 +294,21 @@ static inline void fbdevgl_window_set_pixel(struct fbdevgl_context *fbglcntx,
 	fbdevgl_set_pixel(fbglcntx, effective_x, effective_y, value);
 }
 
+static inline void fbdevgl_window_fill_rect(struct fbdevgl_context *fbglcntx,
+					    unsigned int left,
+					    unsigned int top,
+					    unsigned int right,
+					    unsigned int bottom,
+					    unsigned short value)
+{
+	// TODO: replace this with fast block filling.
+	for(unsigned y = top; y < bottom; y++) {
+		for(unsigned int x = left; x < right; x++) {
+			fbdevgl_set_pixel(fbglcntx, x, y, value);
+		}
+	}
+}
+
 static inline void fbdevgl_window_fill(struct fbdevgl_context *fbglcntx,
 			      unsigned short value)
 {
