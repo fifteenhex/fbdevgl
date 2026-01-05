@@ -14,6 +14,9 @@ struct fbdevgl_context {
 	size_t sz;
 	void *fb;
 
+	/* "Window" stuff */
+	unsigned short left, top, bottom, right;
+
 	/* Rendering stuff */
 
 	/* Geometry of the rendering area */
@@ -228,6 +231,19 @@ static inline int fbdevgl_init(const char *fbdev_path, struct fbdevgl_context *f
 	_fbdgl_geometry()[1] = fbglcntx->height / fbglcntx->scale;
 
 	return 0;
+}
+
+static inline void fbdevgl_setup_centered_window(struct fbdevgl_context *fbglcntx,
+						 unsigned short window_width,
+						 unsigned short window_height)
+{
+	const int x_pad = fbglcntx->width - window_width / 2;
+	const int y_pad = fbglcntx->height - window_height / 2;
+
+	fbglcntx->left = y_pad;
+	fbglcntx->right = fbglcntx->left + window_width;
+	fbglcntx->top = x_pad;
+	fbglcntx->bottom = fbglcntx->top + window_height;
 }
 
 static inline void _fbdevgl_update_damage_rect(struct fbdevgl_context *fbglcntx,
