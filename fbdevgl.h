@@ -308,7 +308,13 @@ static inline void fbdevgl_window_fill_rect(struct fbdevgl_context *fbglcntx,
 
 	// TODO: replace this with fast block filling.
 	for(unsigned y = effective_top; y < effective_bottom; y++) {
+		if (y >= fbglcntx->bottom)
+			break;
+
 		for(unsigned int x = effective_left; x < effective_right; x++) {
+			if (x >= fbglcntx->right)
+				break;
+
 			fbdevgl_set_pixel(fbglcntx, x, y, value);
 		}
 	}
