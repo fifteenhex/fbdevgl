@@ -14,15 +14,15 @@ struct fbdevgl_context {
 	size_t sz;
 	void *fb;
 
-	/* "Window" stuff */
-	unsigned short left, top, bottom, right;
-
 	/* Rendering stuff */
 
 	/* Geometry of the rendering area */
 	unsigned short geometry[2];
 
 	int scale;
+
+	/* "Window" stuff */
+	unsigned short left, top, bottom, right;
 
 	/* The rect damaged by the last *render pass* (yes, it feels wrong writing that.. */
 	unsigned short damage_rect[2][2];
@@ -237,8 +237,8 @@ static inline void fbdevgl_setup_centered_window(struct fbdevgl_context *fbglcnt
 						 unsigned short window_width,
 						 unsigned short window_height)
 {
-	const int x_pad = fbglcntx->width - window_width / 2;
-	const int y_pad = fbglcntx->height - window_height / 2;
+	const int x_pad = (fbglcntx->geometry[0] - window_width) / 2;
+	const int y_pad = (fbglcntx->geometry[1] - window_height) / 2;
 
 	fbglcntx->left = y_pad;
 	fbglcntx->right = fbglcntx->left + window_width;
@@ -284,6 +284,12 @@ static inline void fbdevgl_window_set_pixel(struct fbdevgl_context *fbglcntx,
 {
 	unsigned int effective_x = x + fbglcntx->left;
 	unsigned int effective_y = y + fbglcntx->top;
+
+	if (effective_x >= fbglcntx->right)
+		return;
+
+	if (effective_y >= fbglcntx->bottom)
+		return;
 
 	fbdevgl_set_pixel(fbglcntx, effective_x, effective_y, value);
 }
